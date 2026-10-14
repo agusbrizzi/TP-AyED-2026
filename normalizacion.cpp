@@ -10,15 +10,7 @@ using std::endl;
 using std::getline;
 using std::to_string;
 
-int lenght(string s)
-{
-    int i=0;
-    while(s[i]!='\0')
-    {
-        i++;
-    }
-    return i;
-}
+
 //-----------------------[Creamos a los mozos]--------------------------
 Mozo crearMozo(ComandaHistorica ch,int num, int comision)
 {
