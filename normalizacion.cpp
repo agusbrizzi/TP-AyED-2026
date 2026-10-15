@@ -13,31 +13,31 @@ using std::to_string;
 //-----------------------[Creamos a los mozos]--------------------------
 Mozo crearMozo(ComandaHistorica ch, int num, int comision)
 {
-    Mozo moz;  
-                
-    moz.idMozo=num+1;
-    moz.totalComicion= comision ;
+    Mozo moz;
+
+    moz.idMozo = num + 1;
+    moz.totalComision = comision;
     string clave;
-    cout<<"ingrese la clave del mozo: "<<ch.nombreMozo<<"(max=49 caracteres)"<<endl;
-    cin>>clave;
-    int i=0;
-    int k=5;
-    while(clave.empty()|| clave.length()>=sizeof(moz.password))
+    cout << "ingrese la clave del mozo: " << ch.nombreMozo << "(max=49 caracteres)" << endl;
+    cin >> clave;
+    int i = 0;
+    int k = 5;
+    while (clave.empty() || clave.length() >= sizeof(moz.password))
     {
         cout << "Error: la clave debe tener entre 1 y 49 caracteres. Intente otra vez: ";
         cin >> clave;
     }
-    while(i<(int)clave.length())
+    while (i < (int)clave.length())
     {
-        moz.password[i]=clave[i]+k;
+        moz.password[i] = clave[i] + k;
         i++;
     }
-    moz.password[i]='\0';
-    for(int j=0;j<50;j++)
+    moz.password[i] = '\0';
+    for (int j = 0; j < 50; j++)
     {
-        moz.nombre[j]=ch.nombreMozo[j];
+        moz.nombre[j] = ch.nombreMozo[j];
     }
-    moz.nombre[49]='\0';
+    moz.nombre[49] = '\0';
     return moz;
 }
 int cmpNombre(char nombre[], char c[])
