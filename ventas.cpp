@@ -2,6 +2,7 @@
 #include <string>
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include "struct.hpp"
 
 using std::cin;
@@ -12,74 +13,73 @@ using std::string;
 using std::to_string;
 
 void obtenerNombreComanda(char nombreComanda[]);
-
-void crearPlanilla(const char nombreComanda[]);
-
+bool crearPlanilla(const char nombreComanda[]);
 void encriptarClave(const char clave[], char claveEncriptada[]);
-
 bool validarMozo(int idMozo, const char clave[]);
-
 long buscarProducto(const char nombreInventario[], int codigoBuscado, Producto &producto);
-
 void añadirVenta(const char nombreComanda[]);
-
 void llenarPlanilla(const char nombreComanda[]);
-
 void ordenarPlanilla(const char nombreComanda[]);
 
 int main()
 {
-
     char nombreComanda[24];
 
     obtenerNombreComanda(nombreComanda);
 
-    crearPlanilla(nombreComanda);
+    if (nombreComanda[0] == '\0'){
+        return 1;
+    }
 
+    if (!crearPlanilla(nombreComanda)){
+        return 1;
+    }
     llenarPlanilla(nombreComanda);
-
     ordenarPlanilla(nombreComanda);
 
     return 0;
 }
 
+
 void obtenerNombreComanda(char nombreComanda[])
 {
-
-    string dia, mes, anio;
-    string nombreComandaAux;
-
-    cout << "Ingrese el dia en formato dd: ";
+    int dia, mes, anio;
+    cout << "Ingrese el dia (1-31): ";
     cin >> dia;
-
-    cout << "Ingrese el mes en formato mm: ";
+    cout << "Ingrese el mes (1-12): ";
     cin >> mes;
-
-    cout << "Ingrese el año en formato aaaa: ";
+    cout << "Ingrese el año (AAAA): ";
     cin >> anio;
 
-    nombreComandaAux = "comandas_" + dia + "-" + mes + "-" + anio + ".dat";
+    bool bisiesto = (anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0);
+    int diasMes[] = {31, bisiesto ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-    strcpy(nombreComanda, nombreComandaAux.c_str());
+    if (mes < 1 || mes > 12 || anio < 1 || anio > 9999 || dia < 1 || dia > (mes >= 1 && mes <= 12 ? diasMes[mes - 1] : 0))
+    {
+        cout << "Error: fecha invalida." << endl;
+        nombreComanda[0] = '\0';
+        return;
+    }
+
+    sprintf(nombreComanda, "comandas_%02d-%02d-%04d.dat", dia, mes, anio);
 }
 
-void crearPlanilla(const char nombreComanda[])
+bool crearPlanilla(const char nombreComanda[])
 {
-
     FILE *planilla = fopen(nombreComanda, "ab");
 
     if (planilla == NULL)
     {
         cout << "Error: no se pudo crear/abrir la planilla." << endl;
-        return;
+        return false;
     }
 
     fclose(planilla);
+    return true;
 }
 
 void encriptarClave(const char clave[], char claveEncriptada[])
 {
-
     int i = 0;
     while (clave[i] != '\0')
     {
@@ -91,7 +91,6 @@ void encriptarClave(const char clave[], char claveEncriptada[])
 
 bool validarMozo(int idMozo, const char clave[])
 {
-
     FILE *mozos = fopen("mozos.dat", "rb");
 
     if (mozos == NULL)
@@ -133,7 +132,6 @@ bool validarMozo(int idMozo, const char clave[])
 
 long buscarProducto(const char nombreInventario[], int codigoBuscado, Producto &producto)
 {
-
     FILE *inventario = fopen(nombreInventario, "rb");
     if (inventario == NULL)
     {
@@ -175,20 +173,25 @@ long buscarProducto(const char nombreInventario[], int codigoBuscado, Producto &
     }
 
     fclose(inventario);
-
     return posicion;
 }
 
 void añadirVenta(const char nombreComanda[])
 {
-
     int idMozo;
     cout << "Ingrese ID del mozo: ";
     cin >> idMozo;
 
     char clave[20];
-    cout << "Ingrese su clave: ";
-    cin >> clave;
+    string claveIngresada;
+    cout << "Ingrese su clave (maximo 19 caracteres): ";
+    cin >> claveIngresada;
+    if (claveIngresada.empty() || claveIngresada.length() >= sizeof(clave))
+    {
+        cout << "Error: la clave debe tener entre 1 y 19 caracteres." << endl;
+        return;
+    }
+    strcpy(clave, claveIngresada.c_str());
 
     if (!validarMozo(idMozo, clave))
     {
@@ -196,7 +199,6 @@ void añadirVenta(const char nombreComanda[])
     }
 
     int codigoProducto;
-
     cout << "Ingrese el codigo del producto: ";
     cin >> codigoProducto;
 
@@ -226,58 +228,53 @@ void añadirVenta(const char nombreComanda[])
     }
 
     Comanda nuevaVenta;
-
     nuevaVenta.idMozo = idMozo;
     nuevaVenta.codigoProducto = codigoProducto;
     nuevaVenta.cantidad = cantidad;
-
     nuevaVenta.comision = producto.precio * cantidad * TASA_COMISION;
 
-    FILE *inventario =
-        fopen("inventario.dat", "rb+");
-
-    if (inventario == NULL)
-    {
-
-        cout << "Error: no se pudo abrir el inventario para actualizarlo."
-             << endl;
-
-        return;
-    }
-
-    fseek(inventario,
-          posicionProducto * sizeof(Producto),
-          SEEK_SET);
-
-    producto.stockActual =
-        producto.stockActual - cantidad;
-
-    if (fwrite(&producto, sizeof(Producto), 1, inventario) != 1)
-    {
-        cout << "Error: no se pudo actualizar el inventario." << endl;
-        fclose(inventario);
-        return;
-    }
-
-    fclose(inventario);
-
     FILE *planilla = fopen(nombreComanda, "ab");
-
     if (planilla == NULL)
     {
         cout << "Error: no se pudo abrir la planilla." << endl;
         return;
     }
 
-    if (fwrite(&nuevaVenta, sizeof(Comanda), 1, planilla) != 1)
+    FILE *inventario = fopen("inventario.dat", "rb+");
+    if (inventario == NULL)
     {
-
-        cout << "Error: no se pudo guardar la venta." << endl;
-
+        cout << "Error: no se pudo abrir el inventario para actualizarlo." << endl;
         fclose(planilla);
         return;
     }
 
+    Producto productoOriginal = producto;
+    fseek(inventario, posicionProducto * sizeof(Producto), SEEK_SET);
+    producto.stockActual -= cantidad;
+
+    if (fwrite(&producto, sizeof(Producto), 1, inventario) != 1)
+    {
+        cout << "Error: no se pudo actualizar el inventario." << endl;
+        fclose(inventario);
+        fclose(planilla);
+        return;
+    }
+    fclose(inventario);
+
+    if (fwrite(&nuevaVenta, sizeof(Comanda), 1, planilla) != 1)
+    {
+        cout << "Error: no se pudo guardar la venta. Se intenta restaurar el stock." << endl;
+        fclose(planilla);
+
+        inventario = fopen("inventario.dat", "rb+");
+        if (inventario != NULL)
+        {
+            fseek(inventario, posicionProducto * sizeof(Producto), SEEK_SET);
+            fwrite(&productoOriginal, sizeof(Producto), 1, inventario);
+            fclose(inventario);
+        }
+        return;
+    }
     fclose(planilla);
     cout << "Venta registrada correctamente." << endl;
     cout << "Comision generada: " << nuevaVenta.comision << endl;
@@ -285,7 +282,6 @@ void añadirVenta(const char nombreComanda[])
 
 void llenarPlanilla(const char nombreComanda[])
 {
-
     int opcion = 1;
 
     while (opcion == 1)
@@ -294,7 +290,6 @@ void llenarPlanilla(const char nombreComanda[])
         cout << "1 para aniadir venta, 2 para terminar cargar:" << endl
              << "Opcion: " << endl;
         cin >> opcion;
-
         if (opcion == 1)
         {
             añadirVenta(nombreComanda);
@@ -305,7 +300,6 @@ void llenarPlanilla(const char nombreComanda[])
         }
         else
         {
-
             cout << "Error: opcion invalida." << endl;
             opcion = 1;
         }
@@ -314,37 +308,35 @@ void llenarPlanilla(const char nombreComanda[])
 
 void ordenarPlanilla(const char nombreComanda[])
 {
-
     FILE *planilla = fopen(nombreComanda, "rb");
     if (planilla == NULL)
     {
         cout << "Error: no se pudo abrir la planilla para ordenar." << endl;
         return;
     }
-
     fseek(planilla, 0, SEEK_END);
     long cantidadRegistros = ftell(planilla) / sizeof(Comanda);
-
     fseek(planilla, 0, SEEK_SET);
-
     if (cantidadRegistros <= 1)
     {
         fclose(planilla);
         return;
     }
-
     Comanda *ventas = new Comanda[cantidadRegistros];
-
-    fread(ventas, sizeof(Comanda), cantidadRegistros, planilla);
+    if (fread(ventas, sizeof(Comanda), (size_t)cantidadRegistros, planilla) != (size_t)cantidadRegistros)
+    {
+        cout << "Error: no se pudo leer toda la planilla." << endl;
+        fclose(planilla);
+        delete[] ventas;
+        return;
+    }
     fclose(planilla);
 
     for (long i = 0; i < cantidadRegistros - 1; i++)
     {
         for (long j = 0; j < cantidadRegistros - 1 - i; j++)
         {
-
             bool hayQueIntercambiar = false;
-
             if (ventas[j].idMozo > ventas[j + 1].idMozo)
             {
                 hayQueIntercambiar = true;
@@ -354,7 +346,6 @@ void ordenarPlanilla(const char nombreComanda[])
             {
                 hayQueIntercambiar = true;
             }
-
             if (hayQueIntercambiar)
             {
                 Comanda aux = ventas[j];
@@ -363,7 +354,6 @@ void ordenarPlanilla(const char nombreComanda[])
             }
         }
     }
-
     planilla = fopen(nombreComanda, "wb");
     if (planilla == NULL)
     {
@@ -371,11 +361,11 @@ void ordenarPlanilla(const char nombreComanda[])
         delete[] ventas;
         return;
     }
-
-    fwrite(ventas, sizeof(Comanda), cantidadRegistros, planilla);
+    if (fwrite(ventas, sizeof(Comanda), (size_t)cantidadRegistros, planilla) != (size_t)cantidadRegistros)
+    {
+        cout << "Error: no se pudo guardar toda la planilla ordenada." << endl;
+    }
     fclose(planilla);
-
     delete[] ventas;
-
     cout << "Planilla ordenada correctamente." << endl;
 }
