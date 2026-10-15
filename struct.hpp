@@ -1,34 +1,27 @@
 #include <iostream>
 #include <string>
-using std::string;
-using std::cout;
 using std::cin;
+using std::cout;
 using std::endl;
 using std::getline;
+using std::string;
 using std::to_string;
 
 struct ComandaHistorica
 {
-    char fecha[11]; //"DD-MM-AAAA"
-    char nombreMozo[50]; //el nombre del mozo 
-    int codigoProducto; 
+    char fecha[11];      //"DD-MM-AAAA"
+    char nombreMozo[50]; // el nombre del mozo
+    int codigoProducto;
     int cantidad;
     float comision;
 };
 
-struct Producto
-{
-    int codigo;
-    char descripcion[50];
-    float precio;
-    int stuckActual;
-};
-struct  Mozo
+struct Mozo
 {
     int idMozo;
     char nombre[50];
     char password[20];
-    float totalComicion;
+    float totalComision;
 };
 
 struct Comanda
@@ -39,7 +32,8 @@ struct Comanda
     float comision;
 };
 
-struct Producto {
+struct Producto
+{
     int codigo;
     char descripcion[50];
     float precio;
