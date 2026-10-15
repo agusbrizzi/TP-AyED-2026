@@ -13,24 +13,7 @@ using std::to_string;
 //-----------------------[Creamos a los mozos]--------------------------
 Mozo crearMozo(ComandaHistorica ch, int num, int comision)
 {
-    Mozo moz;
-
-    moz.idMozo = num + 1;
-    moz.totalComision = comision;
-
-    cout << "ingrese la clave del mozo: " << ch.nombreMozo << "(max=50 caracteres)" << endl;
-    cin >> moz.password;
-    int i = 0;
-    while (moz.password[i] != '\0')
-    {
-        moz.password[i] += 5;
-        i++;
-    }
-    for (int j = 0; j < 50; j++)
-    {
-        moz.nombre[j] = ch.nombreMozo[j];
-    }
-    return moz;    Mozo moz;  
+    Mozo moz;  
                 
     moz.idMozo=num+1;
     moz.totalComicion= comision ;
