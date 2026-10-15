@@ -4,7 +4,11 @@ Trabajo Práctico grupal de **Algoritmos y Estructuras de Datos** (UTN FRBA) —
 unidad de **archivos binarios en C/C++**.
 
 > **Integrantes:** _(nombre — usuario de GitHub, uno por línea)_
-> _Agustín Manuel Brizzi, agus.manuelbrizzi@gmail.com_
+> _Agustín Manuel Brizzi, agusbrizzi_
+> _Angel Leonel Coronado Huallpa, alchile777_
+> _Federico Ivan Alvarez Douthat, fedealvdou_
+> _Lucas Thiago Corrales Quispe, luketahd150-dot_
+> _Hector Ariel Orellana Zeballos, hilarioorellana2-ai_
 
 La consigna completa está en **`enunciado.pdf`**. Leela antes de arrancar: el
 cliente (Alberto) cuenta su problema a su manera y ustedes tienen que descubrir
