@@ -27,11 +27,13 @@ int main()
 
     obtenerNombreComanda(nombreComanda);
 
-    if (nombreComanda[0] == '\0'){
+    if (nombreComanda[0] == '\0')
+    {
         return 1;
     }
 
-    if (!crearPlanilla(nombreComanda)){
+    if (!crearPlanilla(nombreComanda))
+    {
         return 1;
     }
     llenarPlanilla(nombreComanda);
@@ -40,7 +42,6 @@ int main()
     return 0;
 }
 
-
 void obtenerNombreComanda(char nombreComanda[])
 {
     int dia, mes, anio;
@@ -48,7 +49,7 @@ void obtenerNombreComanda(char nombreComanda[])
     cin >> dia;
     cout << "Ingrese el mes (1-12): ";
     cin >> mes;
-    cout << "Ingrese el año (AAAA): ";
+    cout << "Ingrese el anio (AAAA): ";
     cin >> anio;
 
     bool bisiesto = (anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0);

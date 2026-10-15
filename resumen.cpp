@@ -21,7 +21,7 @@ int main()
 {
     int semana, mes;
     cout << "=== RESUMEN DEL CIERRE SEMANAL ===" << endl;
-    cout << "Ingrese número de semana (1-5) y mes (1-12): ";
+    cout << "Ingrese numero de semana (1-5) y mes (1-12): ";
     cin >> semana >> mes;
 
     char nombre[40];
