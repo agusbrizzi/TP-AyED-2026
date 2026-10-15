@@ -18,10 +18,12 @@ bool esBisiesto(int anio)
 int diasDelMes(int mes, int anio)
 {
     int dias[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    if (mes < 1 || mes > 12) {
+    if (mes < 1 || mes > 12)
+    {
         return 0;
     }
-    if (mes == 2 && esBisiesto(anio)) {
+    if (mes == 2 && esBisiesto(anio))
+    {
         return 29;
     }
     return dias[mes - 1];
@@ -223,5 +225,9 @@ int main()
     ordenarPlanillaSemanal(nombreSemanal);
 
     cout << "\n--- Resumen del cierre ---\n";
-    cout << "Dias con datos encontrados: " << diasEn 
+    cout << "Dias con datos encontrados: " << diasEncontrados << " de 7\n";
+    cout << "Total de comandas consolidadas: " << totalRegistros << "\n";
+    cout << "Archivo generado: " << nombreSemanal << "\n";
 
+    return 0;
+}
