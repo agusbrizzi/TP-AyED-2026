@@ -1,233 +1,225 @@
 #include <iostream>
-#include <string>
 #include <cstdio>
-#include "struct.hpp"
+#include <cerrno>
+#include <cstring>
+#include "funciones/funciones.h"
 
-using std::cin;
-using std::cout;
-using std::endl;
-using std::string;
-using std::to_string;
+#define RUTA "./datos_de_uso/"
+using namespace std;
 
-//-----------------------[Funciones de fecha]--------------------------
-bool esBisiesto(int anio)
+void nombrePlanillaDia(int dia, int mes, int anio, char nombre[])
 {
-    return (anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0);
+    string diaTexto = to_string(dia);
+    string mesTexto = to_string(mes);
+    string anioTexto = to_string(anio);
+    if (dia < 10)
+        diaTexto = "0" + diaTexto;
+
+    if (mes < 10)
+        mesTexto = "0" + mesTexto;
+
+    while (anioTexto.length() < 4)
+        anioTexto = "0" + anioTexto;
+
+    string nombreCompleto = string(RUTA) + "comandas_" + diaTexto + "-" + mesTexto + "-" + anioTexto + ".dat";
+
+    strcpy(nombre, nombreCompleto.c_str());
 }
 
 int diasDelMes(int mes, int anio)
 {
     int dias[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    if (mes < 1 || mes > 12)
-    {
-        return 0;
-    }
-    if (mes == 2 && esBisiesto(anio))
+    bool bisiesto = anio % 400 == 0 || (anio % 4 == 0 && anio % 100 != 0);
+    if (mes == 2 && bisiesto)
     {
         return 29;
     }
     return dias[mes - 1];
 }
 
-void sumarUnDia(int &dia, int &mes, int &anio)
+// Devuelve 1 si se leyo el dia, 0 si no existe y -1 si hubo un error.
+int cargarDia(const char nombreArchivo[], Comanda *&comandas, int &len)
 {
-    dia++;
-    if (dia > diasDelMes(mes, anio))
+    comandas = nullptr;
+    len = 0;
+    FILE *archivo = fopen(nombreArchivo, "rb");
+    if (archivo == nullptr)
     {
-        dia = 1;
-        mes++;
-        if (mes > 12)
+        if (errno == ENOENT)
         {
-            mes = 1;
-            anio++;
+            return 0; // En caso de que no se encuentre
         }
-    }
-}
-
-string formatearFecha(int dia, int mes, int anio)
-{
-    string d = (dia < 10 ? "0" : "") + to_string(dia);
-    string m = (mes < 10 ? "0" : "") + to_string(mes);
-    return d + "-" + m + "-" + to_string(anio);
-}
-
-string nombreArchivoComanda(int dia, int mes, int anio)
-{
-    return "comandas_" + formatearFecha(dia, mes, anio) + ".dat";
-}
-
-//-----------------------[Nombre del archivo semanal]------------------
-string nombreArchivoSemanal(int dia, int mes)
-{
-    int semana = (dia - 1) / 7 + 1;
-    string mm = (mes < 10 ? "0" : "") + to_string(mes);
-    return "comandas_semana_s" + to_string(semana) + "-" + mm + ".dat";
-}
-
-//-----------------------[Ordenar planilla semanal]--------------------------
-
-void ordenarPlanillaSemanal(const string &nombreArchivo)
-{
-    FILE *planilla = fopen(nombreArchivo.c_str(), "rb");
-
-    if (planilla == NULL)
-    {
-        cout << "Error: no se pudo abrir la planilla semanal para ordenar." << endl;
-        return;
+        mostradorDetexto('e', "No se pudo abrir " + string(nombreArchivo) + ".");
+        return -1;
     }
 
-    fseek(planilla, 0, SEEK_END);
-    long cantidadRegistros = ftell(planilla) / sizeof(Comanda);
-    fseek(planilla, 0, SEEK_SET);
-
-    if (cantidadRegistros <= 1)
+    int capacidad = 16;
+    comandas = new Comanda[capacidad];
+    Comanda comanda;
+    bool valido = true;
+    size_t bytesLeidos;
+    
+    while ((bytesLeidos = fread(&comanda, 1, sizeof(Comanda), archivo)) == sizeof(Comanda))
     {
-        fclose(planilla);
-        return;
-    }
-
-    Comanda *comandas = new Comanda[cantidadRegistros];
-
-    long leidos = fread(comandas, sizeof(Comanda), cantidadRegistros, planilla);
-    fclose(planilla);
-
-    if (leidos != cantidadRegistros)
-    {
-        cout << "Error al leer las comandas semanales." << endl;
-        delete[] comandas;
-        return;
-    }
-
-    for (long i = 0; i < cantidadRegistros - 1; i++)
-    {
-        for (long j = 0; j < cantidadRegistros - 1 - i; j++)
+        if (len > 0 && comandas[len - 1].idMozo > comanda.idMozo)
         {
-            bool hayQueIntercambiar = false;
-
-            if (comandas[j].idMozo > comandas[j + 1].idMozo)
-            {
-                hayQueIntercambiar = true;
-            }
-            else if (comandas[j].idMozo == comandas[j + 1].idMozo &&
-                     comandas[j].codigoProducto > comandas[j + 1].codigoProducto)
-            {
-                hayQueIntercambiar = true;
-            }
-
-            if (hayQueIntercambiar)
-            {
-                Comanda aux = comandas[j];
-                comandas[j] = comandas[j + 1];
-                comandas[j + 1] = aux;
-            }
+            valido = false;
+            break;
         }
+        if (len == capacidad)
+        {
+            int nuevaCapacidad = capacidad * 2;
+            Comanda *ampliadas = new Comanda[nuevaCapacidad];
+            for (int i = 0; i < len; i++)
+            {
+                ampliadas[i] = comandas[i];
+            }
+            delete[] comandas;
+            comandas = ampliadas;
+            capacidad = nuevaCapacidad;
+        }
+        comandas[len++] = comanda;
     }
+    bool errorLectura = ferror(archivo) != 0;
+    fclose(archivo);
 
-    planilla = fopen(nombreArchivo.c_str(), "wb");
-
-    if (planilla == NULL)
+    if (!valido || errorLectura || bytesLeidos != 0)
     {
-        cout << "Error al reescribir la planilla semanal." << endl;
+        mostradorDetexto('e', "No se pudo leer " + string(nombreArchivo) + ".");
+
         delete[] comandas;
-        return;
+        comandas = nullptr;
+        len = 0;
+        return -1;
+    }
+    return 1;
+}
+
+bool guardarSemana(const char nombreArchivo[], const Comanda comandas[], int len)
+{
+    FILE *archivo = fopen(nombreArchivo, "wb");
+    if (archivo == nullptr)
+    {
+        mostradorDetexto('e', "No se pudo crear " + string(nombreArchivo) + ".");
+        return false;
     }
 
-    fwrite(comandas, sizeof(Comanda), cantidadRegistros, planilla);
-    fclose(planilla);
-
-    delete[] comandas;
+    bool guardado = true;
+    for (int i = 0; i < len && guardado; i++)
+    {
+        guardado = fwrite(&comandas[i], sizeof(Comanda), 1, archivo) == 1;
+    }
+    if (fclose(archivo) != 0)
+    {
+        guardado = false;
+    }
+    if (!guardado)
+    {
+        mostradorDetexto('e', "No se pudo completar la escritura de " + string(nombreArchivo) + ".");
+    }
+    return guardado;
 }
 
 int main()
 {
-    int dia, mes, anio;
-    cout << "=== CIERRE SEMANAL DE COMANDAS ===\n";
-    cout << "Ingrese la fecha del LUNES de la semana a cerrar (dia mes anio): ";
-    cin >> dia >> mes >> anio;
+    int semana, mes, anio;
+    mostradorDetexto('t', "=== Cierre semanal ===");
+    mostradorDetexto('t', "Semanas: 1 = dias 1-7, 2 = 8-14, 3 = 15-21, 4 = 22-28, 5 = 29-fin. ");
+    mostradorDetexto('t', "Ingrese el numero de semana: ");
 
-    string nombreSemanal = nombreArchivoSemanal(dia, mes);
-
-    FILE *test = fopen(nombreSemanal.c_str(), "rb");
-    if (test != NULL)
+    if (!(cin >> semana))
     {
-        fclose(test);
-        char resp;
-        cout << "Ya existe un cierre para esa semana. Reemplazarlo? (s/n): ";
-        cin >> resp;
-        if (resp != 's' && resp != 'S')
-        {
-            cout << "Cierre cancelado.\n";
-            return 0;
-        }
-    }
-
-    FILE *salida = fopen(nombreSemanal.c_str(), "wb");
-    if (salida == NULL)
-    {
-        cout << "Error al crear el archivo semanal.\n";
+        mostradorDetexto('e', "Semana invalida.");
         return 1;
     }
 
+    mostradorDetexto('t', "Ingrese el numero de mes: ");
+    if (!(cin >> mes))
+    {
+        mostradorDetexto('e', "Mes invalido.");
+        return 1;
+    }
+
+    mostradorDetexto('t', "Ingrese el ano: ");
+    if (!(cin >> anio) || semana < 1 || semana > 5 ||
+        mes < 1 || mes > 12 || anio < 1 || anio > 9999)
+    {
+        mostradorDetexto('e', " Semana, mes o ano invalido.");
+        return 1;
+    }
+
+    int primerDia = (semana - 1) * 7 + 1;
+    int ultimoDia = semana * 7;
+    int finMes = diasDelMes(mes, anio);
+    if (ultimoDia > finMes)
+    {
+        ultimoDia = finMes;
+    }
+    if (primerDia > ultimoDia)
+    {
+        mostradorDetexto('e', "Esa semana no tiene dias en el mes elegido.");
+        return 1;
+    }
+
+    Comanda *comandasSemana = new Comanda[1];
+    int lenSemana = 0;
     int diasEncontrados = 0;
 
-    FILE *dias[7];
-    Comanda cabeza[7];
-    int n = 0;
-
-    int d = dia, m = mes, a = anio;
-    for (int i = 0; i < 7; i++)
+    for (int dia = primerDia; dia <= ultimoDia; dia++)
     {
-        string nombreDia = nombreArchivoComanda(d, m, a);
-        FILE *f = fopen(nombreDia.c_str(), "rb");
+        char nombreDia[80];
+        nombrePlanillaDia(dia, mes, anio, nombreDia);
+        Comanda *comandasDia;
+        int lenDia;
+        int resultado = cargarDia(nombreDia, comandasDia, lenDia);
+        if (resultado < 0)
+        {
+            delete[] comandasSemana;
+            return 1;
+        }
+        if (resultado == 0)
+        {
+            continue;
+        }
+        diasEncontrados++;
 
-        if (f != NULL && fread(&cabeza[n], sizeof(Comanda), 1, f) == 1)
-        {
-            dias[n] = f;
-            n++;
-            diasEncontrados++;
-            cout << "Dia " << formatearFecha(d, m, a) << ": encontrado\n";
-        }
-        else if (f != NULL)
-        {
-            fclose(f);
-            cout << "Dia " << formatearFecha(d, m, a) << ": vacio, se omite\n";
-        }
-        else
-        {
-            cout << "Dia " << formatearFecha(d, m, a) << ": no hay archivo, se omite\n";
-        }
+        Comanda *combinadas = new Comanda[lenSemana + lenDia];
+        int lenCombinadas;
+        apareoGenerico(comandasSemana, lenSemana, comandasDia, lenDia,
+                       combinadas, lenCombinadas, [](const Comanda &a, const Comanda &b)
+                       { return a.idMozo - b.idMozo; });
 
-        sumarUnDia(d, m, a);
+        delete[] comandasSemana;
+        delete[] comandasDia;
+        comandasSemana = combinadas;
+        lenSemana = lenCombinadas;
     }
 
-    int totalRegistros = 0;
-    while (n > 0)
+    if (diasEncontrados == 0)
     {
-        int menor = 0;
-        for (int i = 1; i < n; i++)
-            if (cabeza[i].idMozo < cabeza[menor].idMozo)
-                menor = i;
-
-        fwrite(&cabeza[menor], sizeof(Comanda), 1, salida);
-        totalRegistros++;
-
-        if (fread(&cabeza[menor], sizeof(Comanda), 1, dias[menor]) != 1)
-        {
-            fclose(dias[menor]);
-            dias[menor] = dias[n - 1];
-            cabeza[menor] = cabeza[n - 1];
-            n--;
-        }
+        mostradorDetexto('e', "No se encontraron planillas para esa semana.");
+        delete[] comandasSemana;
+        return 1;
     }
 
-    fclose(salida);
+    string mesTexto = to_string(mes);
+    if (mes < 10)
+    {
+        mesTexto = "0" + mesTexto;
+    }
 
-    ordenarPlanillaSemanal(nombreSemanal);
+    string nombreSemana = string(RUTA) + "comandas_semana_s" +
+                          to_string(semana) + "-" + mesTexto + ".dat";
 
-    cout << "\n--- Resumen del cierre ---\n";
-    cout << "Dias con datos encontrados: " << diasEncontrados << " de 7\n";
-    cout << "Total de comandas consolidadas: " << totalRegistros << "\n";
-    cout << "Archivo generado: " << nombreSemanal << "\n";
+    bool guardado = guardarSemana(nombreSemana.c_str(), comandasSemana, lenSemana);
+    delete[] comandasSemana;
 
+    if (!guardado)
+    {
+        return 1;
+    }
+
+    mostradorDetexto('t', "Cierre generado: " + string(nombreSemana));
+    mostradorDetexto('t', "Dias incluidos: " + to_string(diasEncontrados) + ". Comandas: " + to_string(lenSemana) + ".");
     return 0;
 }
