@@ -66,94 +66,38 @@ string nombreArchivoSemanal(int dia, int mes)
 
 //-----------------------[Ordenar planilla semanal]--------------------------
 
-void ordenarPlanillaSemanal(const string &nombreArchivo)
-{
-    FILE *planilla = fopen(nombreArchivo.c_str(), "rb");
-
-    if (planilla == NULL)
-    {
-        cout << "Error: no se pudo abrir la planilla semanal para ordenar." << endl;
-        return;
-    }
-
-    fseek(planilla, 0, SEEK_END);
-    long cantidadRegistros = ftell(planilla) / sizeof(Comanda);
-    fseek(planilla, 0, SEEK_SET);
-
-    if (cantidadRegistros <= 1)
-    {
-        fclose(planilla);
-        return;
-    }
-
-    Comanda *comandas = new Comanda[cantidadRegistros];
-
-    long leidos = fread(comandas, sizeof(Comanda), cantidadRegistros, planilla);
-    fclose(planilla);
-
-    if (leidos != cantidadRegistros)
-    {
-        cout << "Error al leer las comandas semanales." << endl;
-        delete[] comandas;
-        return;
-    }
-
-    for (long i = 0; i < cantidadRegistros - 1; i++)
-    {
-        for (long j = 0; j < cantidadRegistros - 1 - i; j++)
-        {
-            bool hayQueIntercambiar = false;
-
-            if (comandas[j].idMozo > comandas[j + 1].idMozo)
-            {
-                hayQueIntercambiar = true;
-            }
-            else if (comandas[j].idMozo == comandas[j + 1].idMozo &&
-                     comandas[j].codigoProducto > comandas[j + 1].codigoProducto)
-            {
-                hayQueIntercambiar = true;
-            }
-
-            if (hayQueIntercambiar)
-            {
-                Comanda aux = comandas[j];
-                comandas[j] = comandas[j + 1];
-                comandas[j + 1] = aux;
-            }
-        }
-    }
-
-    planilla = fopen(nombreArchivo.c_str(), "wb");
-
-    if (planilla == NULL)
-    {
-        cout << "Error al reescribir la planilla semanal." << endl;
-        delete[] comandas;
-        return;
-    }
-
-    fwrite(comandas, sizeof(Comanda), cantidadRegistros, planilla);
-    fclose(planilla);
-
-    delete[] comandas;
-}
-
 int main()
 {
     int dia, mes, anio;
+
     cout << "=== CIERRE SEMANAL DE COMANDAS ===\n";
     cout << "Ingrese la fecha del LUNES de la semana a cerrar (dia mes anio): ";
-    cin >> dia >> mes >> anio;
+
+    if (!(cin >> dia >> mes >> anio))
+    {
+        cout << "Error: debe ingresar dia, mes y año numericos." << endl;
+        return 1;
+    }
+
+    if (anio < 1 || mes < 1 || mes > 12 ||
+        dia < 1 || dia > diasDelMes(mes, anio))
+    {
+        cout << "Error: la fecha ingresada no existe." << endl;
+        return 1;
+    }
 
     string nombreSemanal = nombreArchivoSemanal(dia, mes);
 
     FILE *test = fopen(nombreSemanal.c_str(), "rb");
+
     if (test != NULL)
     {
         fclose(test);
+
         char resp;
         cout << "Ya existe un cierre para esa semana. Reemplazarlo? (s/n): ";
         cin >> resp;
+
         if (resp != 's' && resp != 'S')
         {
             cout << "Cierre cancelado.\n";
@@ -162,6 +106,7 @@ int main()
     }
 
     FILE *salida = fopen(nombreSemanal.c_str(), "wb");
+
     if (salida == NULL)
     {
         cout << "Error al crear el archivo semanal.\n";
@@ -175,6 +120,8 @@ int main()
     int n = 0;
 
     int d = dia, m = mes, a = anio;
+
+    // Abrir las siete planillas diarias y leer su primera comanda.
     for (int i = 0; i < 7; i++)
     {
         string nombreDia = nombreArchivoComanda(d, m, a);
@@ -185,37 +132,65 @@ int main()
             dias[n] = f;
             n++;
             diasEncontrados++;
-            cout << "Dia " << formatearFecha(d, m, a) << ": encontrado\n";
+
+            cout << "Dia " << formatearFecha(d, m, a)
+                 << ": encontrado\n";
         }
         else if (f != NULL)
         {
             fclose(f);
-            cout << "Dia " << formatearFecha(d, m, a) << ": vacio, se omite\n";
+
+            cout << "Dia " << formatearFecha(d, m, a)
+                 << ": vacio, se omite\n";
         }
         else
         {
-            cout << "Dia " << formatearFecha(d, m, a) << ": no hay archivo, se omite\n";
+            cout << "Dia " << formatearFecha(d, m, a)
+                 << ": no hay archivo, se omite\n";
         }
 
         sumarUnDia(d, m, a);
     }
 
+    // Apareo de las planillas diarias.
     int totalRegistros = 0;
+
     while (n > 0)
     {
         int menor = 0;
-        for (int i = 1; i < n; i++)
-            if (cabeza[i].idMozo < cabeza[menor].idMozo)
-                menor = i;
 
-        fwrite(&cabeza[menor], sizeof(Comanda), 1, salida);
+        // Buscar la comanda con menor idMozo entre las cabeceras.
+        for (int i = 1; i < n; i++)
+        {
+            if (cabeza[i].idMozo < cabeza[menor].idMozo)
+            {
+                menor = i;
+            }
+        }
+
+        // Escribir la comanda seleccionada en la planilla semanal.
+        if (fwrite(&cabeza[menor], sizeof(Comanda), 1, salida) != 1)
+        {
+            cout << "Error al escribir la planilla semanal." << endl;
+
+            for (int j = 0; j < n; j++)
+                fclose(dias[j]);
+
+            fclose(salida);
+            return 1;
+        }
+
         totalRegistros++;
 
+        // Leer la siguiente comanda del diario seleccionado.
+        // Si terminó, se cierra y se lo retira del arreglo.
         if (fread(&cabeza[menor], sizeof(Comanda), 1, dias[menor]) != 1)
         {
             fclose(dias[menor]);
+
             dias[menor] = dias[n - 1];
             cabeza[menor] = cabeza[n - 1];
+
             n--;
         }
     }
