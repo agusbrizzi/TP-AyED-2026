@@ -53,7 +53,7 @@ string formatearFecha(int dia, int mes, int anio)
 
 string nombreArchivoComanda(int dia, int mes, int anio)
 {
-    return "comandas_" + formatearFecha(dia, mes, anio) + ".dat";
+    return "comanda_" + formatearFecha(dia, mes, anio) + ".dat";
 }
 
 //-----------------------[Nombre del archivo semanal]------------------
