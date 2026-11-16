@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <string>
 #include <cstdio>
@@ -10,6 +11,7 @@ using std::string;
 using std::to_string;
 
 //-----------------------[Funciones de fecha]--------------------------
+
 bool esBisiesto(int anio)
 {
     return (anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0);
@@ -18,24 +20,29 @@ bool esBisiesto(int anio)
 int diasDelMes(int mes, int anio)
 {
     int dias[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
     if (mes < 1 || mes > 12)
     {
         return 0;
     }
+
     if (mes == 2 && esBisiesto(anio))
     {
         return 29;
     }
+
     return dias[mes - 1];
 }
 
 void sumarUnDia(int &dia, int &mes, int &anio)
 {
     dia++;
+
     if (dia > diasDelMes(mes, anio))
     {
         dia = 1;
         mes++;
+
         if (mes > 12)
         {
             mes = 1;
@@ -48,23 +55,26 @@ string formatearFecha(int dia, int mes, int anio)
 {
     string d = (dia < 10 ? "0" : "") + to_string(dia);
     string m = (mes < 10 ? "0" : "") + to_string(mes);
+
     return d + "-" + m + "-" + to_string(anio);
 }
 
 string nombreArchivoComanda(int dia, int mes, int anio)
 {
-    return "comanda_" + formatearFecha(dia, mes, anio) + ".dat";
+    return "comandas_" + formatearFecha(dia, mes, anio) + ".dat";
 }
 
 //-----------------------[Nombre del archivo semanal]------------------
+
 string nombreArchivoSemanal(int dia, int mes)
 {
     int semana = (dia - 1) / 7 + 1;
     string mm = (mes < 10 ? "0" : "") + to_string(mes);
+
     return "comandas_semana_s" + to_string(semana) + "-" + mm + ".dat";
 }
 
-//-----------------------[Ordenar planilla semanal]--------------------------
+//-----------------------[Programa principal]--------------------------
 
 int main()
 {
@@ -105,14 +115,6 @@ int main()
         }
     }
 
-    FILE *salida = fopen(nombreSemanal.c_str(), "wb");
-
-    if (salida == NULL)
-    {
-        cout << "Error al crear el archivo semanal.\n";
-        return 1;
-    }
-
     int diasEncontrados = 0;
 
     FILE *dias[7];
@@ -121,7 +123,6 @@ int main()
 
     int d = dia, m = mes, a = anio;
 
-    // Abrir las siete planillas diarias y leer su primera comanda.
     for (int i = 0; i < 7; i++)
     {
         string nombreDia = nombreArchivoComanda(d, m, a);
@@ -152,14 +153,30 @@ int main()
         sumarUnDia(d, m, a);
     }
 
-    // Apareo de las planillas diarias.
+    if (n == 0)
+    {
+        cout << "Error: no se encontraron planillas diarias con datos."
+             << endl;
+        return 1;
+    }
+    FILE *salida = fopen(nombreSemanal.c_str(), "wb");
+
+    if (salida == NULL)
+    {
+        cout << "Error al crear el archivo semanal.\n";
+
+        for (int i = 0; i < n; i++)
+        {
+            fclose(dias[i]);
+        }
+
+        return 1;
+    }
     int totalRegistros = 0;
 
     while (n > 0)
     {
         int menor = 0;
-
-        // Buscar la comanda con menor idMozo entre las cabeceras.
         for (int i = 1; i < n; i++)
         {
             if (cabeza[i].idMozo < cabeza[menor].idMozo)
@@ -167,14 +184,14 @@ int main()
                 menor = i;
             }
         }
-
-        // Escribir la comanda seleccionada en la planilla semanal.
         if (fwrite(&cabeza[menor], sizeof(Comanda), 1, salida) != 1)
         {
             cout << "Error al escribir la planilla semanal." << endl;
 
             for (int j = 0; j < n; j++)
+            {
                 fclose(dias[j]);
+            }
 
             fclose(salida);
             return 1;
@@ -182,8 +199,6 @@ int main()
 
         totalRegistros++;
 
-        // Leer la siguiente comanda del diario seleccionado.
-        // Si terminó, se cierra y se lo retira del arreglo.
         if (fread(&cabeza[menor], sizeof(Comanda), 1, dias[menor]) != 1)
         {
             fclose(dias[menor]);
@@ -196,8 +211,6 @@ int main()
     }
 
     fclose(salida);
-
-    ordenarPlanillaSemanal(nombreSemanal);
 
     cout << "\n--- Resumen del cierre ---\n";
     cout << "Dias con datos encontrados: " << diasEncontrados << " de 7\n";
